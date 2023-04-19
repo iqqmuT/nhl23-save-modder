@@ -10,7 +10,7 @@ $ docker build -t nhl23 .
 
 ## Usage
 
-First you need to extract these files from NHL23 save file:
+First you need to [extract](https://github.com/bucanero/apollo-ps4) these files from NHL23 save file:
 
 * `INDEX`
 * `DATA`
