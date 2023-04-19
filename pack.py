@@ -106,9 +106,9 @@ def run(index_file, data_file, db_file):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='File parser.')
+    parser = argparse.ArgumentParser(description='Rewrites NHL23 save file with database.db.')
     parser.add_argument('index_file')
     parser.add_argument('data_file')
-    parser.add_argument('database')
+    parser.add_argument('db_file')
     args = parser.parse_args()
-    run(args.index_file, args.data_file, args.database)
+    run(args.index_file, args.data_file, args.db_file)

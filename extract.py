@@ -50,9 +50,9 @@ def run(index_file, data_file, output):
             fc.write(compressed)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='File parser.')
+    parser = argparse.ArgumentParser(description='Extracts database.db from NHL23 save file.')
     parser.add_argument('index_file')
     parser.add_argument('data_file')
-    parser.add_argument('output')
+    parser.add_argument('db_file')
     args = parser.parse_args()
-    run(args.index_file, args.data_file, args.output)
+    run(args.index_file, args.data_file, args.db_file)
