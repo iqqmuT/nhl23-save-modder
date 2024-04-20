@@ -16,6 +16,15 @@ def write64(data, pos, int_value):
     """Overwrites 64 bit integer into data with given pos."""
     data[pos:pos + 8] = int_value.to_bytes(8, byteorder='little')
 
+def read_until_zero(data):
+    """Reads bytearray from data until 0x00 is found."""
+    result = bytearray()
+    for byte in data:
+        if byte == 0:
+            break
+        result.append(byte)
+    return result
+
 class IndexHandler():
     """
     Handler for NHL23 CustomRoster INDEX save file.
@@ -33,12 +42,14 @@ class IndexHandler():
     def _find_entry(self, name):
         """Returns start position of given entry."""
         pos = 0
-        if name is not self.ENTRY_CONTENT:
-            # find the position of wanted entry
-            pos = self.data.find(name)
-            if pos < 0:
-                raise Exception(f'ERROR: Could not find entry "{name}" from INDEX file')
-        return pos
+        while pos < len(self.data):
+            pos_name = read_until_zero(self.data[pos:])
+            if pos_name == name:
+                return pos
+            if name == self.ENTRY_CONTENT and pos_name not in [self.ENTRY_SAVE_LOAD_FILE_INFO, self.ENTRY_SAVE_LOAD_META_DATA, self.ENTRY_SAVE_LOAD_VER]:
+                return pos
+            pos += 0x50
+        raise Exception(f'ERROR: Could not find entry "{name}" from INDEX file')
 
     def _validate_chunks(self, entry):
         """Validates entry, makes sure data is valid."""
@@ -46,7 +57,7 @@ class IndexHandler():
         for chunk in entry['chunks']:
             sum_length += chunk['end'] - chunk['start']
         if sum_length != entry['total_length']:
-            raise Exception(f'VALIDATION ERROR: chunk lengths of entry "{name}" do not match: {sum_length} != {entry["total_length"]}')
+            raise Exception(f'VALIDATION ERROR: chunk lengths of entry "{entry["name"]}" do not match: {sum_length} != {entry["total_length"]}')
 
     def _read_entry(self, name):
         entry = {
