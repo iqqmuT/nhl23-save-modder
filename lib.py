@@ -2,6 +2,16 @@
 Common library.
 """
 
+def read32(data, pos):
+    """Returns 32 bit integer from data."""
+    int32_bytes = data[pos:pos + 4]
+    int32_val = int.from_bytes(
+        int32_bytes,
+        byteorder='little',
+        signed=False,
+    )
+    return int32_val
+
 def read64(data, pos):
     """Returns 64 bit integer from data."""
     int64_bytes = data[pos:pos + 8]
@@ -11,6 +21,10 @@ def read64(data, pos):
         signed=False,
     )
     return int64_val
+
+def write32(data, pos, int_value):
+    """Overwrites 32 bit integer into data with given pos."""
+    data[pos:pos + 4] = int_value.to_bytes(4, byteorder='little')
 
 def write64(data, pos, int_value):
     """Overwrites 64 bit integer into data with given pos."""
@@ -24,6 +38,24 @@ def read_until_zero(data):
             break
         result.append(byte)
     return result
+
+def read_lz4_frame_length(data, pos):
+    """
+    Returns position where LZ4 compressed frame ends.
+    Given pos must be position of LZ4 magic number (0x184D2204).
+    """
+    if read32(data, pos) != 0x184D2204:
+        raise Exception(f'read_lz4_frame_length ERROR: no LZ4 compressed data found at pos {pos}')
+    i = pos + 7
+    while i < len(data):
+        # each data block begins with block size
+        block_size = read32(data, i)
+        if block_size == 0:
+            # we found end mark, return length of read data
+            # after end mark we have 32 bit checksum
+            return i + 8
+        i += 4 + block_size
+    return None
 
 class IndexHandler():
     """
@@ -48,7 +80,8 @@ class IndexHandler():
                 return pos
             if name == self.ENTRY_CONTENT and pos_name not in [self.ENTRY_SAVE_LOAD_FILE_INFO, self.ENTRY_SAVE_LOAD_META_DATA, self.ENTRY_SAVE_LOAD_VER]:
                 return pos
-            pos += 0x50
+            # next entry pos depends on chunk count
+            pos += self.data[pos + 0x20] * 0x20 + 0x30
         raise Exception(f'ERROR: Could not find entry "{name}" from INDEX file')
 
     def _validate_chunks(self, entry):
