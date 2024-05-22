@@ -33,3 +33,8 @@ New subdirectory `build/` is created with rewritten `INDEX` and `DATA` files. Im
 ### DATA file
 
 * DATA contains `CRCValue` but you do not have to modify it
+
+## Docs
+
+LZ4 format
+https://github.com/lz4/lz4/blob/dev/doc/lz4_Frame_format.md
