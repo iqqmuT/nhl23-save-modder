@@ -37,6 +37,7 @@ def run(index_file, data_file, output):
         data = f.read()
         compressed = None
         for chunk in chunks:
+            print(f"chunk start: 0x{chunk['start']:02x} end: 0x{chunk['end']:02x}")
             chunk_data = data[chunk['start']:chunk['end']]
             if compressed is None:
                 compressed = chunk_data
