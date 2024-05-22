@@ -13,7 +13,13 @@ MODIFIED_DATABASE_FILE there.
 
 BUILD_DIR = 'build'
 
-def compress(db_file):
+def read_file(filename):
+    data = None
+    with open(filename, 'rb') as f:
+        data = f.read()
+    return data
+
+def compress(data):
     """
     Compresses given data using LZ4 and writes to given filename.
     There should be only 1 LZ4 Frame.
@@ -24,8 +30,6 @@ def compress(db_file):
     Specs for LZ4:
     https://android.googlesource.com/platform/external/lz4/+/HEAD/doc/lz4_Frame_format.md
     """
-    with open(db_file, "rb") as f:
-        data = f.read()
     compressed = lz4.frame.compress(
         data,
         # NHL23 uses these settings.
@@ -50,16 +54,16 @@ def replace_db(data, idx_handler, db_file):
     chunks = entry['chunks']
 
     # compress (modified) database file with LZ4
-    compressed = compress(db_file)
+    db_data = read_file(db_file)
+    compressed = compress(db_data)
 
     # copy 17 bytes from original data as prefix
     pos = chunks[0]['start']
     compressed = data[pos:pos + 17] + compressed
 
-    # copy 4 bytes from original data as suffix
-    # It looks like all save files have these 4 bytes after the compressed data.
-    pos = chunks[len(chunks) - 1]['end']
-    compressed += data[pos - 4:pos]
+    # After compressed data there is 32-bit value of
+    # data length of uncompressed data
+    compressed += len(db_data).to_bytes(4, byteorder='little')
 
     new_length = len(compressed)
 
@@ -100,9 +104,8 @@ def run(index_file, data_file, db_file):
     idx_handler = IndexHandler(index_file)
     idx_handler.read()
 
-    with open(data_file, "rb") as f:
-        data = bytearray(f.read())
-        replace_db(data, idx_handler, db_file)
+    data = bytearray(read_file(data_file))
+    replace_db(data, idx_handler, db_file)
 
 
 if __name__ == "__main__":
