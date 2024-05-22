@@ -125,9 +125,9 @@ class IndexHandler():
 
     def _link_chunks(self):
         """
-        All entry chunks should be next to each other.
-        Find the order of chunks and add self.first_entry
-        and 'next' property for each entry.
+        All entry chunks may not be next to each other, there might
+        be extra byte between two chunks.
+        Find the order of chunks.
         """
         def find_chunk_by_start(start):
             for entry in self.entries.values():
@@ -136,17 +136,21 @@ class IndexHandler():
                         return (entry['name'], idx)
             return None
 
-        # find first entry
-        self.ordered_chunks = []
-        result = find_chunk_by_start(0)
-        self.ordered_chunks.append(result)
+        starts = []
+        for entry in self.entries.values():
+            for chunk in entry['chunks']:
+                starts.append(chunk['start'])
+        # sort all starts incrementally so that we are able
+        # to know the order in DATA
+        starts.sort()
 
-        while result is not None:
-            name, chunk = result
-            end_pos = self.entries[name]['chunks'][chunk]['end']
-            result = find_chunk_by_start(end_pos)
-            if result is not None:
-                self.ordered_chunks.append(result)
+        self.ordered_chunks = []
+
+        for start in starts:
+            result = find_chunk_by_start(start)
+            if result is None:
+                raise Exception('ERROR WITH LINKING CHUNKS')
+            self.ordered_chunks.append(result)
 
     def read(self):
         with open(self.filename, "rb") as f:
@@ -222,3 +226,45 @@ class IndexHandler():
     def write(self, output):
         with open(output, "wb") as f:
             f.write(self.data)
+
+
+class TournamentHandler():
+
+    INDEX_MARKER = b'\xBB\x22\x9A\x1B\x00\x00\x00\x00'
+
+    def __init__(self):
+        self.entries = []
+        self.data = None
+
+    def read(self, filename):
+        with open(filename, "rb") as f:
+            self.data = bytearray(f.read())
+
+        # find position where index data starts
+        pos = self.data.find(self.INDEX_MARKER)
+        if pos < 0:
+            raise Exception('ERROR: index not found from tournament file')
+        pos += 4
+
+        self.entries = []
+        while pos < len(self.data):
+            start = read32(self.data, pos)
+            length = read32(self.data, pos + 4)
+            self.entries.append((start, start + length))
+            pos += 0x10
+
+        print(f'FOUND ENTRIES: {self.entries}')
+        return (self.data, self.entries)
+
+
+    def update_entries(self, data, entries):
+        pos = data.find(self.INDEX_MARKER)
+        if pos < 0:
+            raise Exception('ERROR: index not found from given data')
+        pos += 4
+
+        for entry in entries:
+            write32(data, pos, entry[0])
+            length = entry[1] - entry[0]
+            write32(data, pos + 4, length)
+            pos += 0x10
